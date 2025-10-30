@@ -8,13 +8,13 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/stores/authStore";
 import { type SignupData } from "@/services/authService";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { toast } from "sonner";
 
 interface SignupFormProps extends React.ComponentProps<"form"> {
   setView: Dispatch<SetStateAction<"login" | "signup">>;
@@ -22,16 +22,17 @@ interface SignupFormProps extends React.ComponentProps<"form"> {
 
 export function SignupForm({ className, setView, ...props }: SignupFormProps) {
   const { register, handleSubmit, watch, setValue } = useForm<SignupData>({
-    defaultValues: { userType: "patient" },
+    defaultValues: { role: "user" },
   });
 
   const { signup, isLoading, error, clearError } = useAuthStore();
   const router = useRouter();
-  const userType = watch("userType");
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const role = watch("role");
 
   useEffect(() => {
     if (error) {
-      alert(error);
+      toast.error(error);
       clearError();
     }
   }, [error, clearError]);
@@ -40,10 +41,9 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
     const success = await signup(data);
 
     if (success) {
-      alert(
-        "Signup successful! Please check your email to confirm, then you can login."
+      toast.success(
+        "Signup successful! Please check your email to confirm your account before logging in."
       );
-      // Switch to login tab
       router.push("/auth");
     }
   };
@@ -57,26 +57,33 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
       <FieldGroup className="gap-5">
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-muted-foreground text-sm text-balance">
+          <p className="text-muted-foreground text-sm">
             Fill in the form below to create your account
           </p>
         </div>
-        <Field className=" gap-2">
+
+        {/* Role selection */}
+        <Field className="flex-1 gap-2">
+          <FieldLabel htmlFor="role" className="text-xs">
+            Choose your role
+          </FieldLabel>
           <Tabs
-            value={userType}
+            id="role"
+            value={role}
             onValueChange={(value) =>
-              setValue("userType", value as "patient" | "doctor")
+              setValue("role", value as "admin" | "user")
             }
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="patient">Patient</TabsTrigger>
-              <TabsTrigger value="doctor">Doctor</TabsTrigger>
+              <TabsTrigger value="user">User</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
           </Tabs>
         </Field>
+
+        {/* Name fields */}
         <div className="flex gap-4">
-          {/* First Name */}
           <Field className="flex-1 gap-2">
             <FieldLabel htmlFor="firstName" className="text-xs">
               First Name
@@ -84,11 +91,10 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
             <Input
               id="firstName"
               placeholder="John"
-              {...register("firstName", { required: true })}
+              {...register("first_name", { required: true })}
             />
           </Field>
 
-          {/* Last Name */}
           <Field className="flex-1 gap-2">
             <FieldLabel htmlFor="lastName" className="text-xs">
               Last Name
@@ -96,11 +102,12 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
             <Input
               id="lastName"
               placeholder="Doe"
-              {...register("lastName", { required: true })}
+              {...register("last_name", { required: true })}
             />
           </Field>
         </div>
 
+        {/* Email */}
         <Field className="gap-2">
           <FieldLabel htmlFor="email" className="text-xs">
             Email
@@ -109,10 +116,11 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
             id="email"
             type="email"
             placeholder="m@example.com"
-            required
             {...register("email", { required: true })}
           />
         </Field>
+
+        {/* Password */}
         <Field className="gap-2">
           <FieldLabel htmlFor="password" className="text-xs">
             Password
@@ -120,58 +128,48 @@ export function SignupForm({ className, setView, ...props }: SignupFormProps) {
           <Input
             id="password"
             type="password"
-            placeholder="Enter your password 8+ characters"
-            required
+            placeholder="Enter your password (8+ characters)"
             {...register("password", { required: true })}
           />
         </Field>
+
+        {/* Optional fields */}
         <Field className="gap-2">
-          <FieldLabel htmlFor="confirm-password" className="text-xs">
+          <FieldLabel htmlFor="phone" className="text-xs">
             Phone (Optional)
           </FieldLabel>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="+1 (555) 000-0000"
-            {...register("phone")}
-          />
+          <Input id="phone" {...register("phone")} />
         </Field>
-        {userType === "doctor" && (
-          <>
-            <Field className="gap-2">
-              <FieldLabel htmlFor="specialty" className="text-xs">
-                Specialty
-              </FieldLabel>
-              <Input
-                id="specialty"
-                placeholder="e.g., Cardiology"
-                {...register("specialty", { required: true })}
-              />
-            </Field>
-            <Field className="gap-2">
-              <FieldLabel htmlFor="hospital" className="text-xs">
-                Hospital
-              </FieldLabel>
-              <Input
-                id="hospital"
-                placeholder="Hospital name"
-                {...register("hospital", { required: true })}
-              />
-            </Field>
-          </>
-        )}
+
+        <Field className="gap-2">
+          <FieldLabel htmlFor="birth_date" className="text-xs">
+            Date of Birth (Optional)
+          </FieldLabel>
+          <Input id="birth_date" type="date" {...register("birth_date")} />
+        </Field>
+
+        <Field className="gap-2">
+          <FieldLabel htmlFor="address" className="text-xs">
+            Address (Optional)
+          </FieldLabel>
+          <Input id="address" {...register("address")} />
+        </Field>
+
+        {/* Submit button */}
         <Field>
-          <Button type="submit">
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </Field>
+
         <FieldSeparator>Or continue with</FieldSeparator>
+
         <Field>
           <FieldDescription className="text-center">
             Already have an account?{" "}
             <Button
               type="button"
-              variant={"link"}
+              variant="link"
               onClick={() => setView("login")}
               className="p-0"
             >

@@ -4,7 +4,7 @@ import type {
   Reminder,
   ChatMessage,
   HealthRecord,
-} from "@/types/patient";
+} from "@/types/database";
 
 /**
  * Check if user has an active session
@@ -24,9 +24,9 @@ async function hasActiveSession(): Promise<boolean> {
 
 export const patientService = {
   /**
-   * Fetch all prescriptions for a patient (joined with medicines table)
+   * Fetch all prescriptions for a user (joined with medicines table)
    */
-  async getPrescriptions(patientId: string): Promise<Prescription[]> {
+  async getPrescriptions(userId: number): Promise<Prescription[]> {
     try {
       const hasSession = await hasActiveSession();
       if (!hasSession) return [];
@@ -36,11 +36,12 @@ export const patientService = {
         .select(
           `
           *,
-          medicine:medicines(*)
+          medicine:medicines(*),
+          doctor:doctors(*)
         `
         )
-        .eq("patient_id", patientId) // correct column
-        .order("created_at", { ascending: false });
+        .eq("user_id", userId)
+        .order("created_date", { ascending: false });
 
       if (error) {
         console.warn("Could not fetch prescriptions:", error.message);
@@ -55,9 +56,9 @@ export const patientService = {
   },
 
   /**
-   * Fetch all reminders for a patient
+   * Fetch all reminders for a user
    */
-  async getReminders(patientId: string): Promise<Reminder[]> {
+  async getReminders(userId: number): Promise<Reminder[]> {
     try {
       const hasSession = await hasActiveSession();
       if (!hasSession) return [];
@@ -65,7 +66,7 @@ export const patientService = {
       const { data, error } = await supabase
         .from("reminders")
         .select("*")
-        .eq("patient_id", patientId) // corrected
+        .eq("user_id", userId) // corrected
         .order("reminder_datetime", { ascending: true }); // keep original column
 
       if (error) {
@@ -81,9 +82,9 @@ export const patientService = {
   },
 
   /**
-   * Fetch all chat messages for a patient
+   * Fetch all chat messages for a user
    */
-  async getChatMessages(patientId: string): Promise<ChatMessage[]> {
+  async getChatMessages(userId: number): Promise<ChatMessage[]> {
     try {
       const hasSession = await hasActiveSession();
       if (!hasSession) return [];
@@ -91,7 +92,7 @@ export const patientService = {
       const { data, error } = await supabase
         .from("chat_messages")
         .select("*")
-        .eq("patient_id", patientId) // corrected
+        .eq("user_id", userId) // corrected
         .order("timestamp", { ascending: true });
 
       if (error) {
@@ -107,9 +108,9 @@ export const patientService = {
   },
 
   /**
-   * Fetch all health records for a patient
+   * Fetch all health records for a user
    */
-  async getHealthRecords(patientId: string): Promise<HealthRecord[]> {
+  async getHealthRecords(userId: number): Promise<HealthRecord[]> {
     try {
       const hasSession = await hasActiveSession();
       if (!hasSession) return [];
@@ -117,8 +118,8 @@ export const patientService = {
       const { data, error } = await supabase
         .from("health_records")
         .select("*")
-        .eq("patient_id", patientId)
-        .order("datetime", { ascending: false }); // corrected column
+        .eq("user_id", userId)
+        .order("date_time", { ascending: false });
 
       if (error) {
         console.warn("Could not fetch health records:", error.message);

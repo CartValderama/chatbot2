@@ -36,17 +36,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { HealthRecord } from "@/types/patient";
-import type { DoctorPatient } from "@/services/doctorService";
-import { useDoctorStore } from "@/store/doctorStore";
+import type { HealthRecord } from "@/types/database";
+import type { AdminUser } from "@/services/adminService";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface HealthRecordsManagementProps {
   healthRecords: HealthRecord[];
-  patients: DoctorPatient[];
+  patients: AdminUser[];
 }
 
 const healthRecordSchema = z.object({
-  patient_id: z.string().min(1, "Please select a patient"),
+  user_id: z.string().min(1, "Please select a patient"),
   heart_rate: z.string().optional(),
   blood_pressure: z.string().optional(),
   blood_sugar: z.string().optional(),
@@ -62,17 +62,21 @@ export function HealthRecordsManagement({
 }: HealthRecordsManagementProps) {
   const [formOpen, setFormOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [recordToDelete, setRecordToDelete] = React.useState<string | null>(
+  const [recordToDelete, setRecordToDelete] = React.useState<number | null>(
     null
   );
   const [editingRecord, setEditingRecord] = React.useState<HealthRecord | null>(
     null
   );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const { createHealthRecord, updateHealthRecord, deleteHealthRecord } =
-    useDoctorStore();
+  const {
+    createHealthRecord,
+    updateHealthRecord,
+    deleteHealthRecord,
+    fetchUsersHealthRecords,
+  } = useAdminStore();
   const [formData, setFormData] = React.useState<HealthRecordFormValues>({
-    patient_id: "",
+    user_id: "",
     heart_rate: "",
     blood_pressure: "",
     blood_sugar: "",
@@ -85,7 +89,7 @@ export function HealthRecordsManagement({
 
   // Create a map of patient IDs to patient names
   const patientMap = React.useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<number, string>();
     patients.forEach((patient) => {
       map.set(patient.user_id, `${patient.first_name} ${patient.last_name}`);
     });
@@ -96,7 +100,7 @@ export function HealthRecordsManagement({
   React.useEffect(() => {
     if (editingRecord) {
       setFormData({
-        patient_id: editingRecord.patient_id,
+        user_id: String(editingRecord.user_id),
         heart_rate: editingRecord.heart_rate?.toString() || "",
         blood_pressure: editingRecord.blood_pressure || "",
         blood_sugar: editingRecord.blood_sugar?.toString() || "",
@@ -106,7 +110,7 @@ export function HealthRecordsManagement({
       setFormOpen(true);
     } else {
       setFormData({
-        patient_id: "",
+        user_id: "",
         heart_rate: "",
         blood_pressure: "",
         blood_sugar: "",
@@ -124,6 +128,18 @@ export function HealthRecordsManagement({
     }
   };
 
+  // Check if form is valid (at least patient and one health metric)
+  const isFormValid = React.useMemo(() => {
+    const hasPatient = formData.user_id !== "";
+    const hasAtLeastOneMetric =
+      formData.heart_rate !== "" ||
+      formData.blood_pressure !== "" ||
+      formData.blood_sugar !== "" ||
+      formData.temperature !== "" ||
+      formData.notes !== "";
+    return hasPatient && hasAtLeastOneMetric;
+  }, [formData]);
+
   const validate = (): boolean => {
     const result = healthRecordSchema.safeParse(formData);
     if (!result.success) {
@@ -140,8 +156,10 @@ export function HealthRecordsManagement({
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
 
     if (!validate()) {
       return;
@@ -150,7 +168,8 @@ export function HealthRecordsManagement({
     setIsSubmitting(true);
     try {
       const recordData = {
-        patient_id: formData.patient_id,
+        user_id: parseInt(formData.user_id),
+        date_time: new Date().toISOString(),
         heart_rate: formData.heart_rate
           ? parseInt(formData.heart_rate)
           : undefined,
@@ -161,7 +180,7 @@ export function HealthRecordsManagement({
         temperature: formData.temperature
           ? parseFloat(formData.temperature)
           : undefined,
-        notes: formData.notes,
+        notes: formData.notes || undefined,
       };
 
       if (editingRecord) {
@@ -172,6 +191,7 @@ export function HealthRecordsManagement({
 
         if (result.success) {
           toast.success("Health record updated successfully!");
+          await fetchUsersHealthRecords(); // Refresh the table
           handleCloseForm();
         } else {
           toast.error(result.error || "Failed to update health record");
@@ -181,6 +201,7 @@ export function HealthRecordsManagement({
 
         if (result.success) {
           toast.success("Health record created successfully!");
+          await fetchUsersHealthRecords(); // Refresh the table
           handleCloseForm();
         } else {
           toast.error(result.error || "Failed to create health record");
@@ -197,8 +218,9 @@ export function HealthRecordsManagement({
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingRecord(null);
+    setIsSubmitting(false);
     setFormData({
-      patient_id: "",
+      user_id: "",
       heart_rate: "",
       blood_pressure: "",
       blood_sugar: "",
@@ -212,7 +234,7 @@ export function HealthRecordsManagement({
     setEditingRecord(record);
   };
 
-  const handleDeleteClick = (recordId: string) => {
+  const handleDeleteClick = (recordId: number) => {
     setRecordToDelete(recordId);
     setDeleteDialogOpen(true);
   };
@@ -223,6 +245,7 @@ export function HealthRecordsManagement({
     const result = await deleteHealthRecord(recordToDelete);
     if (result.success) {
       toast.success("Health record deleted successfully");
+      await fetchUsersHealthRecords(); // Refresh the table
     } else {
       toast.error(result.error || "Failed to delete health record");
     }
@@ -244,11 +267,12 @@ export function HealthRecordsManagement({
   const columns: ColumnDef<HealthRecord>[] = React.useMemo(
     () => [
       {
-        accessorKey: "patient_id",
+        id: "patientName",
+        accessorFn: (row) => patientMap.get(row.user_id) || "Unknown Patient",
         header: "Patient",
         cell: ({ row }) => (
           <div className="font-medium capitalize">
-            {patientMap.get(row.original.patient_id) || "Unknown Patient"}
+            {patientMap.get(row.original.user_id) || "Unknown Patient"}
           </div>
         ),
       },
@@ -284,16 +308,18 @@ export function HealthRecordsManagement({
         header: "Blood Sugar",
         cell: ({ row }) => (
           <div className="text-muted-foreground">
-            {row.original.blood_sugar ? `${row.original.blood_sugar} mg/dL` : "N/A"}
+            {row.original.blood_sugar
+              ? `${row.original.blood_sugar} mg/dL`
+              : "N/A"}
           </div>
         ),
       },
       {
-        accessorKey: "datetime",
+        accessorKey: "date_time",
         header: "Recorded",
         cell: ({ row }) => (
           <div className="text-muted-foreground">
-            {formatDate(row.original.datetime)}
+            {formatDate(row.original.date_time)}
           </div>
         ),
       },
@@ -345,18 +371,18 @@ export function HealthRecordsManagement({
       <DataTable
         columns={columns}
         data={healthRecords}
-        searchKey="patient_id"
+        searchKey="patientName"
         searchPlaceholder="Search by patient name..."
         emptyMessage="No health records found."
         entityName="health record"
-        getRowId={(row) => row.record_id}
+        getRowId={(row) => String(row.record_id)}
       />
 
       {/* Health Record Form Drawer */}
       <Drawer open={formOpen} onOpenChange={handleCloseForm} direction="right">
-        <DrawerContent className="h-screen top-0 right-0 left-auto mt-0 w-[500px] rounded-none">
+        <DrawerContent className="h-screen top-0 right-0 left-auto mt-0 w-[500px] rounded-none ">
           <DrawerHeader>
-            <DrawerTitle>
+            <DrawerTitle className="text-xl">
               {isEditing ? "Edit Health Record" : "Create New Health Record"}
             </DrawerTitle>
             <DrawerDescription>
@@ -365,31 +391,34 @@ export function HealthRecordsManagement({
                 : "Fill in the patient vitals and health information."}
             </DrawerDescription>
           </DrawerHeader>
-
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-4 px-4 overflow-y-auto flex-1"
+            className="flex flex-col gap-4 px-4 overflow-y-auto "
           >
             {/* Patient Selection */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="patient_id">Patient *</Label>
+            {/* Patient Selection */}
+            <div className="flex flex-col gap-2 w-full">
+              <Label htmlFor="user_id">Patient *</Label>
               <Select
-                value={formData.patient_id}
-                onValueChange={(value) => handleChange("patient_id", value)}
+                value={formData.user_id}
+                onValueChange={(value) => handleChange("user_id", value)}
               >
-                <SelectTrigger id="patient_id">
+                <SelectTrigger id="user_id" className="w-full">
                   <SelectValue placeholder="Select a patient" />
                 </SelectTrigger>
                 <SelectContent>
                   {patients.map((patient) => (
-                    <SelectItem key={patient.user_id} value={patient.user_id}>
+                    <SelectItem
+                      key={patient.user_id}
+                      value={String(patient.user_id)}
+                    >
                       {patient.first_name} {patient.last_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.patient_id && (
-                <p className="text-sm text-red-500">{errors.patient_id}</p>
+              {errors.user_id && (
+                <p className="text-sm text-red-500">{errors.user_id}</p>
               )}
             </div>
 
@@ -457,8 +486,33 @@ export function HealthRecordsManagement({
             </div>
           </form>
 
-          <DrawerFooter>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <DrawerFooter className="mt-0">
+            {!isFormValid && !isSubmitting && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2 bg-muted/50 rounded-md">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="text-sm text-muted-foreground">
+                  Please select a patient and enter at least one health metric
+                </p>
+              </div>
+            )}
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !isFormValid}
+            >
               {isSubmitting
                 ? isEditing
                   ? "Updating..."
@@ -468,7 +522,9 @@ export function HealthRecordsManagement({
                 : "Create Health Record"}
             </Button>
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>

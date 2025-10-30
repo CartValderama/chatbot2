@@ -5,7 +5,6 @@ import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/dashboard/data-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -17,13 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Prescription } from "@/types/patient";
-import type { DoctorPatient } from "@/services/doctorService";
-import { useDoctorStore } from "@/store/doctorStore";
+import type { Prescription } from "@/types/database";
+import type { AdminUser } from "@/services/adminService";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface PrescriptionListProps {
   prescriptions: Prescription[];
-  patients: DoctorPatient[];
+  patients: AdminUser[];
   onEdit: (prescription: Prescription) => void;
 }
 
@@ -33,11 +32,13 @@ export function PrescriptionList({
   onEdit,
 }: PrescriptionListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [prescriptionToDelete, setPrescriptionToDelete] = React.useState<string | null>(null);
-  const { deletePrescription } = useDoctorStore();
+  const [prescriptionToDelete, setPrescriptionToDelete] = React.useState<
+    number | null
+  >(null);
+  const { deletePrescription } = useAdminStore();
   // Create a map of patient IDs to patient names for quick lookup
   const patientMap = React.useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<number, string>();
     patients.forEach((patient) => {
       map.set(patient.user_id, `${patient.first_name} ${patient.last_name}`);
     });
@@ -52,7 +53,7 @@ export function PrescriptionList({
     });
   };
 
-  const handleDeleteClick = (prescriptionId: string) => {
+  const handleDeleteClick = (prescriptionId: number) => {
     setPrescriptionToDelete(prescriptionId);
     setDeleteDialogOpen(true);
   };
@@ -75,11 +76,11 @@ export function PrescriptionList({
     () => [
       {
         id: "patient",
-        accessorFn: (row) => patientMap.get(row.patient_id) || "Unknown Patient",
+        accessorFn: (row) => patientMap.get(row.user_id) || "Unknown Patient",
         header: "Patient",
         cell: ({ row }) => (
           <div className="font-medium capitalize">
-            {patientMap.get(row.original.patient_id) || "Unknown Patient"}
+            {patientMap.get(row.original.user_id) || "Unknown Patient"}
           </div>
         ),
       },
@@ -114,15 +115,7 @@ export function PrescriptionList({
           </div>
         ),
       },
-      {
-        id: "status",
-        header: "Status",
-        cell: () => (
-          <Badge variant="outline" className="text-green-600">
-            Active
-          </Badge>
-        ),
-      },
+
       {
         id: "actions",
         header: () => <div className="text-right">Actions</div>,
@@ -165,7 +158,7 @@ export function PrescriptionList({
           searchPlaceholder="Search prescriptions by patient..."
           emptyMessage="No prescriptions found."
           entityName="prescription"
-          getRowId={(row) => row.prescription_id}
+          getRowId={(row) => String(row.prescription_id)}
         />
       </div>
 
@@ -174,7 +167,8 @@ export function PrescriptionList({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the prescription.
+              This action cannot be undone. This will permanently delete the
+              prescription.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

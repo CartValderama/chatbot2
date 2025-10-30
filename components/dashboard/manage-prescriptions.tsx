@@ -9,7 +9,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "./data-table";
 import { PrescriptionForm } from "./prescription-form";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,15 +20,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doctorService } from "@/services/doctorService";
-import { useDoctorStore } from "@/store/doctorStore";
-import type { Medicine, Prescription } from "@/types/patient";
-import type { DoctorPatient } from "@/services/doctorService";
+import { useAdminStore } from "@/stores/adminStore";
+import type { Doctor, Prescription } from "@/types/database";
+import type { AdminUser } from "@/services/adminService";
 
 interface ManagePrescriptionsProps {
-  patients: DoctorPatient[];
+  patients: AdminUser[];
   prescriptions: Prescription[];
-  doctorId: string;
+  doctors: Doctor[];
   editingPrescription?: Prescription | null;
   onClearEdit?: () => void;
   onEditPrescription?: (prescription: Prescription) => void;
@@ -37,33 +36,38 @@ interface ManagePrescriptionsProps {
 export function ManagePrescriptions({
   patients,
   prescriptions,
-  doctorId,
+  doctors,
   editingPrescription,
   onClearEdit,
   onEditPrescription,
 }: ManagePrescriptionsProps) {
   const [prescriptionFormOpen, setPrescriptionFormOpen] = useState(false);
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [prescriptionToDelete, setPrescriptionToDelete] = useState<string | null>(null);
-  const { createPrescription, updatePrescription, deletePrescription } = useDoctorStore();
+  const [prescriptionToDelete, setPrescriptionToDelete] = useState<
+    number | null
+  >(null);
+  const {
+    medicines,
+    createPrescription,
+    updatePrescription,
+    deletePrescription,
+    fetchPrescriptions,
+    fetchMedicines,
+  } = useAdminStore();
 
   // Compute whether form should be open (either explicitly opened or editing)
   const isFormOpen = prescriptionFormOpen || !!editingPrescription;
 
   // Fetch medicines when form is opened
   useEffect(() => {
-    const fetchMedicines = async () => {
-      if (isFormOpen && medicines.length === 0) {
-        const medicinesData = await doctorService.getAllMedicines();
-        setMedicines(medicinesData);
-      }
-    };
-    fetchMedicines();
-  }, [isFormOpen, medicines.length]);
+    if (isFormOpen) {
+      fetchMedicines();
+    }
+  }, [isFormOpen, fetchMedicines]);
 
   const handleSubmitPrescription = async (data: {
-    patient_id: string;
+    user_id: string;
+    doctor_id: string;
     medicine_id: string;
     dosage: string;
     frequency: string;
@@ -71,47 +75,55 @@ export function ManagePrescriptions({
     start_date: string;
     end_date?: string;
   }) => {
-    if (editingPrescription) {
-      // Update existing prescription
-      const result = await updatePrescription(
-        editingPrescription.prescription_id,
-        {
-          patient_id: data.patient_id,
-          medicine_id: data.medicine_id,
+    try {
+      if (editingPrescription) {
+        // Update existing prescription
+        const result = await updatePrescription(
+          editingPrescription.prescription_id,
+          {
+            user_id: parseInt(data.user_id),
+            doctor_id: parseInt(data.doctor_id),
+            medicine_id: parseInt(data.medicine_id),
+            dosage: data.dosage,
+            frequency: data.frequency,
+            instructions: data.instructions,
+            start_date: data.start_date,
+            end_date: data.end_date,
+          }
+        );
+
+        if (result.success) {
+          toast.success("Prescription updated successfully!");
+          await fetchPrescriptions(); // Refresh the table
+          setPrescriptionFormOpen(false);
+          onClearEdit?.();
+        } else {
+          toast.error(result.error || "Failed to update prescription");
+        }
+      } else {
+        // Create new prescription
+        const result = await createPrescription({
+          user_id: parseInt(data.user_id),
+          doctor_id: parseInt(data.doctor_id),
+          medicine_id: parseInt(data.medicine_id),
           dosage: data.dosage,
           frequency: data.frequency,
           instructions: data.instructions,
           start_date: data.start_date,
           end_date: data.end_date,
+        });
+
+        if (result.success) {
+          toast.success("Prescription created successfully!");
+          await fetchPrescriptions(); // Refresh the table
+          setPrescriptionFormOpen(false);
+        } else {
+          toast.error(result.error || "Failed to create prescription");
         }
-      );
-
-      if (result.success) {
-        toast.success("Prescription updated successfully!");
-        setPrescriptionFormOpen(false);
-        onClearEdit?.();
-      } else {
-        toast.error(result.error || "Failed to update prescription");
       }
-    } else {
-      // Create new prescription
-      const result = await createPrescription({
-        patient_id: data.patient_id,
-        doctor_id: doctorId,
-        medicine_id: data.medicine_id,
-        dosage: data.dosage,
-        frequency: data.frequency,
-        instructions: data.instructions,
-        start_date: data.start_date,
-        end_date: data.end_date,
-      });
-
-      if (result.success) {
-        toast.success("Prescription created successfully!");
-        setPrescriptionFormOpen(false);
-      } else {
-        toast.error(result.error || "Failed to create prescription");
-      }
+    } catch (error) {
+      console.error("Unexpected error in handleSubmitPrescription:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -128,7 +140,7 @@ export function ManagePrescriptions({
     }
   };
 
-  const handleDeleteClick = React.useCallback((prescriptionId: string) => {
+  const handleDeleteClick = React.useCallback((prescriptionId: number) => {
     setPrescriptionToDelete(prescriptionId);
     setDeleteDialogOpen(true);
   }, []);
@@ -139,6 +151,7 @@ export function ManagePrescriptions({
     const result = await deletePrescription(prescriptionToDelete);
     if (result.success) {
       toast.success("Prescription deleted successfully");
+      await fetchPrescriptions(); // Refresh the table
     } else {
       toast.error(result.error || "Failed to delete prescription");
     }
@@ -146,15 +159,18 @@ export function ManagePrescriptions({
     setPrescriptionToDelete(null);
   };
 
-  const handleEditClick = React.useCallback((prescription: Prescription) => {
-    if (onEditPrescription) {
-      onEditPrescription(prescription);
-    }
-  }, [onEditPrescription]);
+  const handleEditClick = React.useCallback(
+    (prescription: Prescription) => {
+      if (onEditPrescription) {
+        onEditPrescription(prescription);
+      }
+    },
+    [onEditPrescription]
+  );
 
   // Create a map of patient IDs to patient names
   const patientMap = React.useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<number, string>();
     patients.forEach((patient) => {
       map.set(patient.user_id, `${patient.first_name} ${patient.last_name}`);
     });
@@ -174,11 +190,11 @@ export function ManagePrescriptions({
     () => [
       {
         id: "patient",
-        accessorFn: (row) => patientMap.get(row.patient_id) || "Unknown Patient",
+        accessorFn: (row) => patientMap.get(row.user_id) || "Unknown Patient",
         header: "Patient",
         cell: ({ row }) => (
           <div className="font-medium capitalize">
-            {patientMap.get(row.original.patient_id) || "Unknown Patient"}
+            {patientMap.get(row.original.user_id) || "Unknown Patient"}
           </div>
         ),
       },
@@ -211,15 +227,6 @@ export function ManagePrescriptions({
           <div className="text-muted-foreground">
             {formatDate(row.original.start_date)}
           </div>
-        ),
-      },
-      {
-        id: "status",
-        header: "Status",
-        cell: () => (
-          <Badge variant="outline" className="text-green-600">
-            Active
-          </Badge>
         ),
       },
       {
@@ -274,7 +281,7 @@ export function ManagePrescriptions({
         searchPlaceholder="Search prescriptions by patient or medicine..."
         emptyMessage="No prescriptions found."
         entityName="prescription"
-        getRowId={(row) => row.prescription_id}
+        getRowId={(row) => String(row.prescription_id)}
       />
 
       {/* Prescription Form */}
@@ -282,8 +289,8 @@ export function ManagePrescriptions({
         open={isFormOpen}
         onOpenChange={handleFormClose}
         patients={patients}
+        doctors={doctors} // ✅ pass doctors
         medicines={medicines}
-        doctorId={doctorId}
         onSubmit={handleSubmitPrescription}
         editPrescription={editingPrescription}
       />
@@ -294,12 +301,16 @@ export function ManagePrescriptions({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the prescription.
+              This action cannot be undone. This will permanently delete the
+              prescription.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-500 hover:bg-red-600">
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-500 hover:bg-red-600"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

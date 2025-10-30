@@ -18,10 +18,10 @@ export function NavMain({
     title: string;
     url: string;
     icon?: Icon;
-    view?: "dashboard" | "manage-prescriptions" | "health-records" | "manage-medicines";
+    view?: "dashboard" | "manage-prescriptions" | "manage-reminders" | "health-records" | "manage-medicines" | "manage-doctors";
   }[];
   onNavigate?: (
-    view: "dashboard" | "manage-prescriptions" | "health-records" | "manage-medicines"
+    view: "dashboard" | "manage-prescriptions" | "manage-reminders" | "health-records" | "manage-medicines" | "manage-doctors"
   ) => void;
 }) {
   return (

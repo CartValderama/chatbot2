@@ -10,9 +10,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 type LoginFormValues = {
   email: string;
@@ -25,12 +26,12 @@ interface LoginFormProps extends React.ComponentProps<"form"> {
 
 export function LoginForm({ className, setView, ...props }: LoginFormProps) {
   const { register, handleSubmit } = useForm<LoginFormValues>();
-  const { login, profile, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
     if (error) {
-      alert(error);
+      toast.error(error);
       clearError();
     }
   }, [error, clearError]);
@@ -43,11 +44,10 @@ export function LoginForm({ className, setView, ...props }: LoginFormProps) {
       const currentProfile = useAuthStore.getState().profile;
 
       if (currentProfile) {
-        // Redirect based on user type
+        toast.success("Login successful! Redirecting...");
+        // Redirect based on user role
         const dashboardPath =
-          currentProfile.user_type === "patient"
-            ? "/patient-dashboard"
-            : "/doctor-dashboard";
+          currentProfile.role === "user" ? "/chatbot" : "/admin-dashboard";
         router.push(dashboardPath);
       }
     }
@@ -94,7 +94,9 @@ export function LoginForm({ className, setView, ...props }: LoginFormProps) {
         </Field>
 
         <Field>
-          <Button type="submit">Login</Button>
+          <Button type="submit">
+            {isLoading ? "Logging in..." : "Log in"}
+          </Button>
         </Field>
 
         <FieldSeparator>Or continue with</FieldSeparator>
@@ -108,7 +110,7 @@ export function LoginForm({ className, setView, ...props }: LoginFormProps) {
               onClick={() => setView("signup")}
               className="p-0"
             >
-              {isLoading ? "Logging in..." : "Log in"}
+              Sign up
             </Button>
           </FieldDescription>
         </Field>

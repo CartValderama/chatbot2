@@ -4,12 +4,12 @@ import * as React from "react";
 import {
   IconDashboard,
   IconHelp,
-  IconInnerShadowTop,
+  IconHeart,
   IconSearch,
   IconSettings,
   IconFileText,
-  IconMedicineSyrup,
   IconPlayerRecord,
+  IconBell,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/dashboard/nav-documents";
@@ -24,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Heart, Pill } from "lucide-react";
 
 const data = {
   user: {
@@ -39,10 +40,16 @@ const data = {
       view: "dashboard" as const,
     },
     {
-      title: "Manage Prescriptions",
+      title: "Prescriptions",
       url: "#",
       icon: IconFileText,
       view: "manage-prescriptions" as const,
+    },
+    {
+      title: "Reminders",
+      url: "#",
+      icon: IconBell,
+      view: "manage-reminders" as const,
     },
     {
       title: "Health Records",
@@ -70,10 +77,16 @@ const data = {
   ],
   documents: [
     {
-      name: "Manage Medicines",
+      name: "Medicines",
       url: "#",
-      icon: IconMedicineSyrup,
+      icon: Pill,
       view: "manage-medicines" as const,
+    },
+    {
+      name: "Doctors",
+      url: "#",
+      icon: Heart,
+      view: "manage-doctors" as const,
     },
   ],
 };
@@ -85,7 +98,13 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     avatar: string;
   };
   onNavigate?: (
-    view: "dashboard" | "manage-prescriptions" | "health-records" | "manage-medicines"
+    view:
+      | "dashboard"
+      | "manage-prescriptions"
+      | "manage-reminders"
+      | "health-records"
+      | "manage-medicines"
+      | "manage-doctors"
   ) => void;
 }
 
@@ -101,9 +120,9 @@ export function AppSidebar({ user, onNavigate, ...props }: AppSidebarProps) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="/doctor-dashboard">
-                <IconInnerShadowTop className="size-5!" />
-                <span className="text-base font-semibold">HealthCare</span>
+              <a href="/admin-dashboard">
+                <IconHeart className="size-5!" />
+                <span className="text-base font-semibold">HealthCare Assistant</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

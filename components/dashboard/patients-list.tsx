@@ -2,31 +2,26 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { IconCircleCheckFilled } from "@tabler/icons-react";
 import { DataTable } from "@/components/dashboard/data-table";
-import { Badge } from "@/components/ui/badge";
-import type { DoctorPatient } from "@/services/doctorService";
-import type { Prescription } from "@/types/patient";
+import type { AdminUser } from "@/services/adminService";
+import type { Prescription } from "@/types/database";
 
 interface PatientsListProps {
-  patients: DoctorPatient[];
+  patients: AdminUser[];
   prescriptions: Prescription[];
 }
 
-interface PatientTableData extends DoctorPatient {
+interface PatientTableData extends AdminUser {
   prescriptionCount: number;
 }
 
-export function PatientsList({
-  patients,
-  prescriptions,
-}: PatientsListProps) {
+export function PatientsList({ patients, prescriptions }: PatientsListProps) {
   // Create a map to count prescriptions per patient
   const prescriptionCountMap = React.useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<number, number>();
     prescriptions.forEach((prescription) => {
-      const count = map.get(prescription.patient_id) || 0;
-      map.set(prescription.patient_id, count + 1);
+      const count = map.get(prescription.user_id) || 0;
+      map.set(prescription.user_id, count + 1);
     });
     return map;
   }, [prescriptions]);
@@ -80,16 +75,6 @@ export function PatientsList({
           </div>
         ),
       },
-      {
-        id: "status",
-        header: "Status",
-        cell: () => (
-          <Badge variant="outline" className="text-muted-foreground px-1.5">
-            <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-            Active
-          </Badge>
-        ),
-      },
     ],
     []
   );
@@ -109,7 +94,7 @@ export function PatientsList({
         searchPlaceholder="Search patients by name..."
         emptyMessage="No patients found."
         entityName="patient"
-        getRowId={(row) => row.user_id}
+        getRowId={(row) => String(row.user_id)}
       />
     </div>
   );

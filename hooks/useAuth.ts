@@ -1,14 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
+import type { UserRole } from "@/types/database";
 
-type UserType = 'patient' | 'doctor';
-
-export function useAuth(requiredUserType?: UserType) {
+export function useAuth(requiredRole?: UserRole) {
   const router = useRouter();
-  const { user, profile, getCurrentUser } = useAuthStore();
+  const { user, profile, getCurrentUser, _hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const hasCheckedAuth = useRef(false);
@@ -18,6 +17,11 @@ export function useAuth(requiredUserType?: UserType) {
     isMounted.current = true;
 
     const checkAuth = async () => {
+      // Wait for hydration to complete before checking auth
+      if (!_hasHydrated) {
+        return;
+      }
+
       // Prevent multiple auth checks
       if (hasCheckedAuth.current) {
         return;
@@ -26,7 +30,7 @@ export function useAuth(requiredUserType?: UserType) {
       setIsLoading(true);
 
       try {
-        // If no user in store, try to get current user
+        // If no user in store after hydration, try to get current user from Supabase
         if (!user) {
           await getCurrentUser();
         }
@@ -40,19 +44,20 @@ export function useAuth(requiredUserType?: UserType) {
         // If no user, redirect to auth page
         if (!currentUser) {
           hasCheckedAuth.current = true;
-          router.push('/auth');
+          router.push("/auth");
           setIsLoading(false);
           return;
         }
 
-        // If user type is required, check authorization
-        if (requiredUserType && currentProfile) {
-          if (currentProfile.user_type !== requiredUserType) {
+        // If role is required, check authorization
+        if (requiredRole && currentProfile) {
+          if (currentProfile.role !== requiredRole) {
             // Redirect to correct dashboard
             hasCheckedAuth.current = true;
-            const correctDashboard = currentProfile.user_type === 'patient'
-              ? '/patient-dashboard'
-              : '/doctor-dashboard';
+            const correctDashboard =
+              currentProfile.role === "user"
+                ? "/patient-dashboard"
+                : "/admin-dashboard";
             router.push(correctDashboard);
             setIsLoading(false);
             return;
@@ -63,11 +68,11 @@ export function useAuth(requiredUserType?: UserType) {
         setIsAuthorized(true);
         setIsLoading(false);
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error("Auth check error:", error);
         if (isMounted.current) {
           hasCheckedAuth.current = true;
           setIsLoading(false);
-          router.push('/auth');
+          router.push("/auth");
         }
       }
     };
@@ -78,7 +83,7 @@ export function useAuth(requiredUserType?: UserType) {
     return () => {
       isMounted.current = false;
     };
-  }, [user, profile, requiredUserType, router, getCurrentUser]);
+  }, [user, profile, requiredRole, router, getCurrentUser, _hasHydrated]);
 
   return { user, profile, isLoading, isAuthorized };
 }

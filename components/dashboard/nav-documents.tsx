@@ -1,6 +1,6 @@
 "use client";
 
-import { type Icon } from "@tabler/icons-react";
+import * as React from "react";
 
 import {
   SidebarGroup,
@@ -17,18 +17,28 @@ export function NavDocuments({
   items: {
     name: string;
     url: string;
-    icon: Icon;
-    view?: "dashboard" | "manage-prescriptions" | "health-records" | "manage-medicines";
+    icon: React.ComponentType<{ className?: string }>;
+    view?:
+      | "dashboard"
+      | "manage-prescriptions"
+      | "manage-reminders"
+      | "health-records"
+      | "manage-medicines"
+      | "manage-doctors";
   }[];
   onNavigate?: (
-    view: "dashboard" | "manage-prescriptions" | "health-records" | "manage-medicines"
+    view:
+      | "dashboard"
+      | "manage-prescriptions"
+      | "manage-reminders"
+      | "health-records"
+      | "manage-medicines"
+      | "manage-doctors"
   ) => void;
 }) {
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>
-        Manage the list of available medicines.
-      </SidebarGroupLabel>
+      <SidebarGroupLabel>Manage Options</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>

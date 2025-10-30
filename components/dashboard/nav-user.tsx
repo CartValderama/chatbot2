@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/stores/authStore";
 
 export function NavUser({
   user,
@@ -35,7 +35,7 @@ export function NavUser({
 
   const handleLogout = async () => {
     await logout();
-    router.push("/auth");
+    router.push("/");
   };
 
   // Get initials from name for avatar fallback

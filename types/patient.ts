@@ -44,9 +44,10 @@ export interface HealthRecord {
   record_id: string;
   patient_id: string;
   heart_rate?: number;
-  blood_pressure?: string;
-  blood_sugar?: number;
+  blood_pressure?: number;
   temperature?: number;
+  weight?: number;
+  height?: number;
   notes?: string;
   datetime: string;
   created_at: string;

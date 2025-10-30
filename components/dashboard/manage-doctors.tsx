@@ -29,77 +29,79 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Medicine } from "@/types/database";
+import type { Doctor } from "@/types/database";
 import { useAdminStore } from "@/stores/adminStore";
 
-const medicineSchema = z.object({
-  name: z.string().min(1, "Medicine name is required"),
-  type: z.string().optional(),
-  dosage: z.string().optional(),
-  side_effects: z.string().optional(),
-  instructions: z.string().optional(),
+const doctorSchema = z.object({
+  name: z.string().min(1, "Doctor name is required"),
+  speciality: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  hospital: z.string().optional(),
+  license_number: z.string().optional(),
 });
 
-type MedicineFormValues = z.infer<typeof medicineSchema>;
+type DoctorFormValues = z.infer<typeof doctorSchema>;
 
-export function ManageMedicines() {
+export function ManageDoctors() {
   const [formOpen, setFormOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [medicineToDelete, setMedicineToDelete] = React.useState<number | null>(
+  const [doctorToDelete, setDoctorToDelete] = React.useState<number | null>(
     null
   );
-  const [editingMedicine, setEditingMedicine] = React.useState<Medicine | null>(
-    null
-  );
-  const [formData, setFormData] = React.useState<MedicineFormValues>({
+  const [editingDoctor, setEditingDoctor] = React.useState<Doctor | null>(null);
+  const [formData, setFormData] = React.useState<DoctorFormValues>({
     name: "",
-    type: "",
-    dosage: "",
-    side_effects: "",
-    instructions: "",
+    speciality: "",
+    phone: "",
+    email: "",
+    hospital: "",
+    license_number: "",
   });
   const [errors, setErrors] = React.useState<
-    Partial<Record<keyof MedicineFormValues, string>>
+    Partial<Record<keyof DoctorFormValues, string>>
   >({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const {
-    medicines,
-    medicinesLoading,
-    fetchMedicines,
-    createMedicine,
-    updateMedicine,
-    deleteMedicine,
+    doctors,
+    doctorsLoading,
+    fetchDoctors,
+    createDoctor,
+    updateDoctor,
+    deleteDoctor,
   } = useAdminStore();
 
-  // Fetch medicines on mount
+  // Fetch doctors on mount
   React.useEffect(() => {
-    fetchMedicines();
+    fetchDoctors();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
-    if (editingMedicine) {
+    if (editingDoctor) {
       setFormData({
-        name: editingMedicine.name,
-        type: editingMedicine.type ?? "",
-        dosage: editingMedicine.dosage ?? "",
-        side_effects: editingMedicine.side_effects ?? "",
-        instructions: editingMedicine.instructions ?? "",
+        name: editingDoctor.name,
+        speciality: editingDoctor.speciality ?? "",
+        phone: editingDoctor.phone ?? "",
+        email: editingDoctor.email ?? "",
+        hospital: editingDoctor.hospital ?? "",
+        license_number: editingDoctor.license_number ?? "",
       });
       setFormOpen(true);
     } else {
       setFormData({
         name: "",
-        type: "",
-        dosage: "",
-        side_effects: "",
-        instructions: "",
+        speciality: "",
+        phone: "",
+        email: "",
+        hospital: "",
+        license_number: "",
       });
     }
     setErrors({});
-  }, [editingMedicine]);
+  }, [editingDoctor]);
 
-  const handleChange = (field: keyof MedicineFormValues, value: string) => {
+  const handleChange = (field: keyof DoctorFormValues, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -110,12 +112,12 @@ export function ManageMedicines() {
   }, [formData.name]);
 
   const validate = (): boolean => {
-    const result = medicineSchema.safeParse(formData);
+    const result = doctorSchema.safeParse(formData);
     if (!result.success) {
-      const newErrors: Partial<Record<keyof MedicineFormValues, string>> = {};
+      const newErrors: Partial<Record<keyof DoctorFormValues, string>> = {};
       result.error.issues.forEach((err) => {
         if (err.path[0])
-          newErrors[err.path[0] as keyof MedicineFormValues] = err.message;
+          newErrors[err.path[0] as keyof DoctorFormValues] = err.message;
       });
       setErrors(newErrors);
       return false;
@@ -132,42 +134,44 @@ export function ManageMedicines() {
     if (!validate()) return;
 
     setIsSubmitting(true);
-    const medicineData = {
+    const doctorData = {
       name: formData.name,
-      type: formData.type || undefined,
-      dosage: formData.dosage || undefined,
-      side_effects: formData.side_effects || undefined,
-      instructions: formData.instructions || undefined,
+      speciality: formData.speciality || undefined,
+      phone: formData.phone || undefined,
+      email: formData.email || undefined,
+      hospital: formData.hospital || undefined,
+      license_number: formData.license_number || undefined,
     };
 
     try {
-      const result = editingMedicine
-        ? await updateMedicine(editingMedicine.medicine_id, medicineData)
-        : await createMedicine(medicineData);
+      const result = editingDoctor
+        ? await updateDoctor(editingDoctor.doctor_id, doctorData)
+        : await createDoctor(doctorData);
 
       if (result.success) {
         toast.success(
-          editingMedicine
-            ? "Medicine updated successfully!"
-            : "Medicine created successfully!"
+          editingDoctor
+            ? "Doctor updated successfully!"
+            : "Doctor created successfully!"
         );
-        await fetchMedicines();
+        await fetchDoctors();
         setFormOpen(false);
         // Reset form data
         setFormData({
           name: "",
-          type: "",
-          dosage: "",
-          side_effects: "",
-          instructions: "",
+          speciality: "",
+          phone: "",
+          email: "",
+          hospital: "",
+          license_number: "",
         });
         setErrors({});
-        setEditingMedicine(null);
+        setEditingDoctor(null);
       } else {
         toast.error(result.error || "Operation failed");
       }
     } catch (error) {
-      console.error("Error submitting medicine:", error);
+      console.error("Error submitting doctor:", error);
       toast.error("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
@@ -179,13 +183,14 @@ export function ManageMedicines() {
       // Only close if not currently submitting
       if (!isSubmitting) {
         setFormOpen(false);
-        setEditingMedicine(null);
+        setEditingDoctor(null);
         setFormData({
           name: "",
-          type: "",
-          dosage: "",
-          side_effects: "",
-          instructions: "",
+          speciality: "",
+          phone: "",
+          email: "",
+          hospital: "",
+          license_number: "",
         });
         setErrors({});
       }
@@ -195,29 +200,39 @@ export function ManageMedicines() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!medicineToDelete) return;
-    const result = await deleteMedicine(medicineToDelete);
+    if (!doctorToDelete) return;
+    const result = await deleteDoctor(doctorToDelete);
     if (result.success) {
-      toast.success("Medicine deleted");
-      await fetchMedicines();
-    } else toast.error(result.error || "Failed to delete medicine");
+      toast.success("Doctor deleted");
+      await fetchDoctors();
+    } else toast.error(result.error || "Failed to delete doctor");
 
     setDeleteDialogOpen(false);
-    setMedicineToDelete(null);
+    setDoctorToDelete(null);
   };
 
-  const columns: ColumnDef<Medicine>[] = React.useMemo(
+  const columns: ColumnDef<Doctor>[] = React.useMemo(
     () => [
-      { accessorKey: "name", header: "Medicine Name" },
+      { accessorKey: "name", header: "Doctor Name" },
       {
-        accessorKey: "type",
-        header: "Type",
-        cell: ({ row }) => row.original.type || "N/A",
+        accessorKey: "speciality",
+        header: "Speciality",
+        cell: ({ row }) => row.original.speciality || "N/A",
       },
       {
-        accessorKey: "dosage",
-        header: "Dosage",
-        cell: ({ row }) => row.original.dosage || "N/A",
+        accessorKey: "hospital",
+        header: "Hospital",
+        cell: ({ row }) => row.original.hospital || "N/A",
+      },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ row }) => row.original.phone || "N/A",
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => row.original.email || "N/A",
       },
       {
         id: "actions",
@@ -227,7 +242,7 @@ export function ManageMedicines() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setEditingMedicine(row.original)}
+              onClick={() => setEditingDoctor(row.original)}
             >
               <IconEdit className="h-4 w-4" />
             </Button>
@@ -235,7 +250,7 @@ export function ManageMedicines() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                setMedicineToDelete(row.original.medicine_id);
+                setDoctorToDelete(row.original.doctor_id);
                 setDeleteDialogOpen(true);
               }}
             >
@@ -248,55 +263,53 @@ export function ManageMedicines() {
     []
   );
 
-  if (medicinesLoading) {
+  if (doctorsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading medicines...</p>
+        <p className="text-muted-foreground">Loading doctors...</p>
       </div>
     );
   }
 
-  const isEditing = !!editingMedicine;
+  const isEditing = !!editingDoctor;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Manage Medicines
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Manage Doctors</h2>
           <p className="text-muted-foreground">
-            Add, edit, and manage medicines.
+            Add, edit, and manage doctors.
           </p>
         </div>
         <Button onClick={() => setFormOpen(true)}>
-          <IconPlus className="h-4 w-4" /> New Medicine
+          <IconPlus className="h-4 w-4" /> New Doctor
         </Button>
       </div>
 
-      {/* Medicines Table */}
+      {/* Doctors Table */}
       <DataTable
         columns={columns}
-        data={medicines}
+        data={doctors}
         searchKey="name"
-        searchPlaceholder="Search medicines..."
-        emptyMessage="No medicines found."
-        entityName="medicine"
-        getRowId={(row) => String(row.medicine_id)}
+        searchPlaceholder="Search doctors..."
+        emptyMessage="No doctors found."
+        entityName="doctor"
+        getRowId={(row) => String(row.doctor_id)}
       />
 
-      {/* Medicine Form Drawer */}
+      {/* Doctor Form Drawer */}
       <Drawer open={formOpen} onOpenChange={handleOpenChange} direction="right">
         <DrawerContent className="h-screen top-0 right-0 left-auto mt-0 w-[500px] rounded-none">
           <DrawerHeader>
             <DrawerTitle>
-              {isEditing ? "Edit Medicine" : "New Medicine"}
+              {isEditing ? "Edit Doctor" : "New Doctor"}
             </DrawerTitle>
             <DrawerDescription>
               {isEditing
-                ? "Update the medicine details."
-                : "Fill in the medicine details."}
+                ? "Update the doctor details."
+                : "Fill in the doctor details."}
             </DrawerDescription>
           </DrawerHeader>
 
@@ -304,50 +317,40 @@ export function ManageMedicines() {
             onSubmit={handleSubmit}
             className="flex flex-col gap-4 px-4 overflow-y-auto"
           >
-            {["name", "type", "dosage", "side_effects", "instructions"].map(
-              (field) => (
-                <div key={field} className="flex flex-col gap-2">
-                  <Label htmlFor={field}>
-                    {field
-                      .replace("_", " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                    {field === "name" ? " *" : ""}
-                  </Label>
-                  {field === "side_effects" || field === "instructions" ? (
-                    <textarea
-                      id={field}
-                      className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                      placeholder={`Enter ${field.replace("_", " ")}`}
-                      value={formData[field as keyof MedicineFormValues]}
-                      onChange={(e) =>
-                        handleChange(
-                          field as keyof MedicineFormValues,
-                          e.target.value
-                        )
-                      }
-                    />
-                  ) : (
-                    <Input
-                      id={field}
-                      type="text"
-                      placeholder={`Enter ${field.replace("_", " ")}`}
-                      value={formData[field as keyof MedicineFormValues]}
-                      onChange={(e) =>
-                        handleChange(
-                          field as keyof MedicineFormValues,
-                          e.target.value
-                        )
-                      }
-                    />
-                  )}
-                  {errors[field as keyof MedicineFormValues] && (
-                    <p className="text-sm text-red-500">
-                      {errors[field as keyof MedicineFormValues]}
-                    </p>
-                  )}
-                </div>
-              )
-            )}
+            {[
+              "name",
+              "speciality",
+              "phone",
+              "email",
+              "hospital",
+              "license_number",
+            ].map((field) => (
+              <div key={field} className="flex flex-col gap-2">
+                <Label htmlFor={field}>
+                  {field
+                    .replace("_", " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {field === "name" ? " *" : ""}
+                </Label>
+                <Input
+                  id={field}
+                  type={field === "email" ? "email" : "text"}
+                  placeholder={`Enter ${field.replace("_", " ")}`}
+                  value={formData[field as keyof DoctorFormValues]}
+                  onChange={(e) =>
+                    handleChange(
+                      field as keyof DoctorFormValues,
+                      e.target.value
+                    )
+                  }
+                />
+                {errors[field as keyof DoctorFormValues] && (
+                  <p className="text-sm text-red-500">
+                    {errors[field as keyof DoctorFormValues]}
+                  </p>
+                )}
+              </div>
+            ))}
           </form>
 
           <DrawerFooter className="mt-0">
@@ -368,7 +371,7 @@ export function ManageMedicines() {
                   />
                 </svg>
                 <p className="text-sm text-muted-foreground">
-                  Please enter a medicine name (*)
+                  Please enter a doctor name (*)
                 </p>
               </div>
             )}
@@ -382,8 +385,8 @@ export function ManageMedicines() {
                   ? "Updating..."
                   : "Creating..."
                 : isEditing
-                ? "Update Medicine"
-                : "Create Medicine"}
+                ? "Update Doctor"
+                : "Create Doctor"}
             </Button>
             <DrawerClose asChild>
               <Button type="button" variant="outline">
@@ -398,9 +401,9 @@ export function ManageMedicines() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Medicine?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Doctor?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The medicine will be permanently
+              This action cannot be undone. The doctor will be permanently
               deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
