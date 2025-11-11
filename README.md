@@ -44,5 +44,3 @@ To sign in as a user:
 
 - patient@gmail.com
 - 123456
-
-test
