@@ -20,7 +20,8 @@
       "Bash(powershell -Command \"Invoke-WebRequest -Uri http://localhost:3000/api/test-db -UseBasicParsing | Select-Object -ExpandProperty Content\")",
       "Bash(timeout 5 cmd /c \"echo Testing connection && powershell -Command \"\"try { (Invoke-WebRequest -Uri ''http://localhost:3000/'' -UseBasicParsing -TimeoutSec 5).StatusCode } catch { Write-Output ''Error: '' + $_Exception.Message }\"\"\")",
       "WebFetch(domain:console.groq.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
