@@ -50,7 +50,7 @@ export async function handleGetPrescriptions(
     }
 
     // Formatter data for Groq
-    const formattedPrescriptions = data.map((p: any) => ({
+    const formattedPrescriptions = data.map((p: Prescription) => ({
       medicine: p.medicine?.name,
       dosage: p.dosage,
       frequency: p.frequency,
@@ -204,7 +204,7 @@ export async function handleGetTodaysSchedule(userId: number): Promise<string> {
     return JSON.stringify({
       message: "Dagens oversikt:",
       todays_reminders: reminders || [],
-      active_medications: prescriptions?.map((p: any) => ({
+      active_medications: prescriptions?.map((p: Prescription) => ({
         medicine: p.medicine?.name,
         dosage: p.dosage,
         frequency: p.frequency,
@@ -231,7 +231,7 @@ export async function handleGetDoctors(userId: number): Promise<string> {
       .from("users")
       .select("primary_doctor_id")
       .eq("user_id", userId)
-      .single();
+      .single<{ primary_doctor_id: number | null }>();
 
     if (userError) throw userError;
 
@@ -244,10 +244,10 @@ export async function handleGetDoctors(userId: number): Promise<string> {
         .from("doctors")
         .select("*")
         .eq("doctor_id", userData.primary_doctor_id)
-        .single();
+        .single<Doctor>();
 
       if (!primaryDoctorError && primaryDoctor) {
-        allDoctors.push(primaryDoctor as Doctor);
+        allDoctors.push(primaryDoctor);
         doctorIds.add(primaryDoctor.doctor_id);
       }
     }
@@ -263,7 +263,7 @@ export async function handleGetDoctors(userId: number): Promise<string> {
       const uniqueDoctorIds = Array.from(
         new Set(
           prescriptions
-            .map((p: any) => p.doctor_id)
+            .map((p: { doctor_id: number }) => p.doctor_id)
             .filter((id: number) => id && !doctorIds.has(id))
         )
       );
@@ -273,10 +273,11 @@ export async function handleGetDoctors(userId: number): Promise<string> {
         const { data: doctors, error: doctorsError } = await supabase
           .from("doctors")
           .select("*")
-          .in("doctor_id", uniqueDoctorIds);
+          .in("doctor_id", uniqueDoctorIds)
+          .returns<Doctor[]>();
 
         if (!doctorsError && doctors) {
-          allDoctors.push(...(doctors as Doctor[]));
+          allDoctors.push(...doctors);
         }
       }
     }

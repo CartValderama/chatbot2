@@ -24,7 +24,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * For authentication i API routes, bruk headers/cookies fra request.
  */
 export function createServerClient() {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
     auth: {
       persistSession: false, // VIKTIG: Ikke persist på server
       autoRefreshToken: false,
@@ -41,7 +41,7 @@ export function createServerClient() {
  * @param authToken - Access token fra Authorization header
  */
 export function createServerClientWithAuth(authToken: string) {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
     global: {
       headers: {
         Authorization: `Bearer ${authToken}`,

@@ -35,10 +35,10 @@ curl -X POST http://localhost:3000/api/chat \\
         "6. Bruk den i Authorization header",
       ],
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
-        error: error.message,
+        error: error instanceof Error ? error.message : "Ukjent feil",
       },
       { status: 500 }
     );

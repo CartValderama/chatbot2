@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/providers/auth-provider";
 import { KeepAliveProvider } from "@/providers/keep-alive-provider";
+import { ReminderCheckerProvider } from "@/providers/reminder-checker-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,8 +34,10 @@ export default function RootLayout({
       >
         <AuthProvider>
           <KeepAliveProvider>
-            {children}
-            <Toaster richColors position="top-right" />
+            <ReminderCheckerProvider>
+              {children}
+              <Toaster richColors position="top-right" />
+            </ReminderCheckerProvider>
           </KeepAliveProvider>
         </AuthProvider>
       </body>

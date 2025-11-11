@@ -39,7 +39,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const results: any = {
+  interface TestResult {
+    function: string;
+    success: boolean;
+    result?: unknown;
+    routing_tests?: Array<{ function: string; success: boolean; expected_error?: boolean }>;
+  }
+
+  interface Results {
+    userId: number;
+    timestamp: string;
+    tests: TestResult[];
+    success: boolean;
+    message?: string;
+  }
+
+  const results: Results = {
     userId: userIdNum,
     timestamp: new Date().toISOString(),
     tests: [],
@@ -150,13 +165,13 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(results, { status: results.success ? 200 : 500 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         success: false,
         error: "Fatal error",
-        message: error.message,
-        stack: error.stack,
+        message: error instanceof Error ? error.message : "Ukjent feil",
+        stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

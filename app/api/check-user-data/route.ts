@@ -13,7 +13,15 @@ export async function GET() {
     const { data: users } = await supabase
       .from("users")
       .select("user_id, first_name, last_name, email")
-      .limit(10);
+      .limit(10)
+      .returns<
+        {
+          user_id: number;
+          first_name: string;
+          last_name: string;
+          email: string | null;
+        }[]
+      >();
 
     if (!users) {
       return NextResponse.json({ error: "No users found" });
@@ -54,10 +62,10 @@ export async function GET() {
       success: true,
       users: userDataSummary,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : "Ukjent feil",
     });
   }
 }

@@ -11,7 +11,23 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/api/supabaseServerClient";
 
 export async function GET() {
-  const results: any = {
+  interface TestResult {
+    name: string;
+    success: boolean;
+    error?: string;
+    data?: string | null;
+    table_structure_ok?: boolean;
+    columns_verified?: string[];
+  }
+
+  interface Results {
+    timestamp: string;
+    tests: TestResult[];
+    success: boolean;
+    message?: string;
+  }
+
+  const results: Results = {
     timestamp: new Date().toISOString(),
     tests: [],
     success: true,
@@ -106,12 +122,12 @@ export async function GET() {
 
     return NextResponse.json(results, { status: results.success ? 200 : 500 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         success: false,
         error: "Fatal error",
-        message: error.message,
+        message: error instanceof Error ? error.message : "Ukjent feil",
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
