@@ -131,3 +131,49 @@ export interface UserProfile extends User {
 // Legacy aliases
 export type Patient = User;
 export type { User as PatientType };
+
+/**
+ * Supabase Database Type
+ * Wrapper for alle tabeller i databasen
+ */
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: User;
+        Insert: Omit<User, "user_id" | "registration_date">;
+        Update: Partial<Omit<User, "user_id">>;
+      };
+      doctors: {
+        Row: Doctor;
+        Insert: Omit<Doctor, "doctor_id" | "created_date">;
+        Update: Partial<Omit<Doctor, "doctor_id">>;
+      };
+      medicines: {
+        Row: Medicine;
+        Insert: Omit<Medicine, "medicine_id" | "created_date">;
+        Update: Partial<Omit<Medicine, "medicine_id">>;
+      };
+      prescriptions: {
+        Row: Prescription;
+        Insert: Omit<Prescription, "prescription_id" | "created_date">;
+        Update: Partial<Omit<Prescription, "prescription_id">>;
+      };
+      health_records: {
+        Row: HealthRecord;
+        Insert: Omit<HealthRecord, "record_id" | "created_date">;
+        Update: Partial<Omit<HealthRecord, "record_id">>;
+      };
+      reminders: {
+        Row: Reminder;
+        Insert: Omit<Reminder, "reminder_id" | "created_date">;
+        Update: Partial<Omit<Reminder, "reminder_id">>;
+      };
+      chat_messages: {
+        Row: ChatMessage;
+        Insert: Omit<ChatMessage, "message_id">;
+        Update: Partial<Omit<ChatMessage, "message_id">>;
+      };
+    };
+  };
+}

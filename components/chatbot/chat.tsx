@@ -11,7 +11,7 @@ export function Chat() {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, isSending, error, sendMessage } = useChatbotStore();
+  const { messages, isSending, isLoadingHistory, error, sendMessage } = useChatbotStore();
   const { profile } = useAuthStore();
 
   const scrollToBottom = () => {
@@ -44,11 +44,6 @@ export function Chat() {
     const messageText = inputMessage.trim();
     setInputMessage("");
 
-    // Since AI isn't set up yet, show a notification
-    if (!process.env.NEXT_PUBLIC_AI_API_ENDPOINT) {
-      toast.info("AI service not configured yet - using fallback responses");
-    }
-
     const success = await sendMessage(profile.user_id, messageText);
 
     if (!success) {
@@ -63,24 +58,14 @@ export function Chat() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {!profile && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg m-4 p-4">
-          <div className="flex items-center">
-            <div className="shrink-0">
-              <span className="text-yellow-500 text-xl">⚠️</span>
-            </div>
-            <div className="ml-4">
-              <p className="text-lg text-yellow-800 font-medium">
-                Connection issue - Using simplified responses for now.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-6">
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-sm text-gray-500">Loading chat history...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <svg
               className="w-16 h-16 text-gray-400 mb-4"

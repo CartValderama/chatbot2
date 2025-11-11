@@ -9,14 +9,19 @@ import { Header } from "@/components/header";
 export default function ChatbotPage() {
   const { profile, isLoading, isAuthorized } = useAuth("user");
 
-  const { clearMessages } = useChatbotStore();
+  const { loadChatHistory, clearMessages } = useChatbotStore();
 
   useEffect(() => {
+    // Load chat history when component mounts
+    if (profile?.user_id) {
+      loadChatHistory(profile.user_id);
+    }
+
     // Cleanup messages when unmounting
     return () => {
       clearMessages();
     };
-  }, [clearMessages]);
+  }, [profile?.user_id, loadChatHistory, clearMessages]);
 
   if (isLoading) {
     return (
